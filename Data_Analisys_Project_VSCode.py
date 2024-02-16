@@ -1,5 +1,7 @@
 import re
+import gensim
 import pandas as pd
+import numpy as np
 
 import nltk.corpus
 nltk.download('stopwords')
@@ -7,6 +9,11 @@ from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+from nltk import ngrams
+
+from gensim.models import LdaModel
+from gensim.corpora import Dictionary
+from gensim.models import CoherenceModel
 
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -45,6 +52,10 @@ for w in complaints:
     if w not in voc:
         voc.append(w)
 print(voc) ## Der Wortschatz wurde aufgebaut, wobei jedes einzelne bereinigte Wort aus den Beschwerden nur einmal im Vokabular erscheint.
+
+
+N_grams = list(ngrams(complaints, 4))
+print(N_grams) ## N-grams
 
 
 def CalcBow(voc, complaints):
@@ -98,3 +109,16 @@ for i, comp in enumerate(lsa_mod2.components_):
 print(f"Topic {i}:")
 print(' '.join(word for word, _ in sd_words))
 print() ## Die Schlüsselwörter für jedes Thema.
+
+## Coherence Score
+tokenized_texts = [word_tokenize(text.lower()) for text in complaints] ## Tokenisierung
+
+dic = Dictionary(tokenized_texts)
+corpus = [dic.doc2bow(text) for text in tokenized_texts] ## Neue Erstellung eines Wörterbuchs und einer Korpusrepräsentation für das LDA-Modell
+
+lda_model_new = LdaModel(corpus, num_topics=3, id2word=dic) ## Das LDA-Modell trainieren
+
+co_model_lda = CoherenceModel(model=lda_model, texts=tokenized_texts, dictionary=dic, coherence='c_v')
+coherence_score = co_model_lda.get_coherence() ## Berechnung des Coherence Scores
+
+print("The Coherence Score is:", coherence_score)
